@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boss Timer - High Performance</title>
+    <title>Envy - Boss Timer</title>
     
     <link rel="icon" href="images/LogoEnvy.jpg" type="image/jpeg">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -95,9 +95,21 @@
         .btn-pip { position: absolute; top: 30px; right: 30px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4); transition: 0.2s; z-index: 100; }
         .btn-pip:hover { background: #d35400; transform: translateY(-2px); }
 
+        /* ข้อความแจ้งเตือนเมื่อเปิดจอแยก */
+        .pip-active-msg {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80%;
+            color: var(--text-light);
+            text-align: center;
+        }
+        .pip-active-msg h3 { color: var(--primary); margin-bottom: 10px; }
+
         @media (max-width: 768px) { .container { flex-direction: column; overflow-y: scroll; } .left-panel, .right-panel { width: 100%; height: auto; } }
 
-        /* 🔥🔥🔥 CSS สำหรับโหมดจอแยก (PiP - Compact Landscape) 🔥🔥🔥 */
+        /* 🔥🔥🔥 CSS สำหรับโหมดจอแยก (High Performance) 🔥🔥🔥 */
         body.pip-mode {
             padding: 0 !important;
             zoom: 1 !important;
@@ -105,15 +117,19 @@
             overflow-y: auto; 
         }
 
+        /* 🚀 ตัด Shadow และ Transition ออกเพื่อลดการกิน GPU */
         .pip-mode .timer-card {
             flex-direction: row; 
             align-items: center;
             justify-content: space-between;
-            padding: 5px 10px; /* ลด Padding */
+            padding: 5px 10px;
             border-left-width: 4px; 
-            margin-bottom: 5px; /* ลดระยะห่าง */
+            margin-bottom: 5px; 
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: none !important; /* NO SHADOW */
+            transition: none !important; /* NO ANIMATION */
+            border: 1px solid #dfe4ea;
+            background: #fff;
             min-height: 50px;
         }
 
@@ -124,7 +140,7 @@
         }
 
         .pip-mode .timer-info img {
-            width: 35px;  /* รูปเล็ก */
+            width: 35px;  
             height: 35px;
             border-radius: 6px;
             border: none;
@@ -136,21 +152,17 @@
         }
 
         .pip-mode .timer-text h3 {
-            font-size: 0.9rem; /* ชื่อบอสตัวเล็ก */
+            font-size: 0.9rem;
             margin-bottom: 0;
             line-height: 1;
         }
 
-        .pip-mode .card-badge {
-            display: none; /* ซ่อน Badge ในจอเล็กเพื่อประหยัดที่ */
-        }
-
-        .pip-mode .spawn-time-text {
-            display: none; /* ซ่อนเวลาเกิด */
+        .pip-mode .card-badge, .pip-mode .spawn-time-text {
+            display: none; 
         }
 
         .pip-mode .countdown {
-            font-size: 1.2em; 
+            font-size: 1.4em; 
             width: auto;
             margin: 0 8px;
             text-align: right;
@@ -196,7 +208,14 @@
     <div class="right-panel" id="rightPanel">
         <button class="btn-pip" onclick="togglePictureInPicture()">🖥️ เปิดจอแยก (Floating)</button>
         <h2 style="margin-bottom: 25px; color: var(--primary);">⏳ รายการรอเกิด (Sync Realtime)</h2>
+        
         <div id="timerList"></div>
+
+        <div id="pipActiveMsg" class="pip-active-msg">
+            <h3 style="font-size: 3em;">🖥️</h3>
+            <h3>กำลังแสดงผลบนจอแยก</h3>
+            <p>หน้าจอนี้จะหยุดอัปเดตชั่วคราวเพื่อประหยัดทรัพยากรเครื่องของคุณ</p>
+        </div>
     </div>
 </div>
 
@@ -235,7 +254,7 @@
         { id: 14, type: 'MVP', name: "Orc Lord", img: "images/MVP_Boss/MVP_Orc Lord.png" },
         { id: 15, type: 'MVP', name: "Phreeoni", img: "images/MVP_Boss/MVP_Phreeoni.png" },
         { id: 16, type: 'MVP', name: "Retribution", img: "images/MVP_Boss/MVP_Retribution.png" },
-        { id: 17, type: 'MVP', name: "rsxo806 N", img: "images/MVP_Boss/MVP_rsxo806 N.png" },
+        { id: 17, type: 'MVP', name: "RSX", img: "images/MVP_Boss/MVP_RSX.png" },
         { id: 18, type: 'MVP', name: "Shadow Chaser Gertie", img: "images/MVP_Boss/MVP_Shadow Chaser Gertie.png" },
         { id: 19, type: 'MVP', name: "Tao Gunka", img: "images/MVP_Boss/MVP_Tao Gunka.png" },
         { id: 20, type: 'MVP', name: "Time Holder", img: "images/MVP_Boss/MVP_Time Holder.png" },
@@ -254,7 +273,7 @@
         { id: 112, type: 'Mini', name: "Mastering", img: "images/Mini_Boss/Mini_Mastering.png" },
         { id: 113, type: 'Mini', name: "Mysteltainn", img: "images/Mini_Boss/Mini_Mysteltainn.png" },
         { id: 114, type: 'Mini', name: "Naght Sieger", img: "images/Mini_Boss/Mini_Naght Sieger .png" },
-        { id: 115, type: 'Mini', name: "Necromancer 4", img: "images/Mini_Boss/Mini_Necromancer 4.png" },
+        { id: 115, type: 'Mini', name: "Necromancer", img: "images/Mini_Boss/Mini_Necromancer.png" },
         { id: 116, type: 'Mini', name: "Observation", img: "images/Mini_Boss/Mini_Observation.png" },
         { id: 117, type: 'Mini', name: "Ogretooth", img: "images/Mini_Boss/Mini_Ogretooth.png" },
         { id: 118, type: 'Mini', name: "Skeggiold", img: "images/Mini_Boss/Mini_Skeggiold.png" },
@@ -359,7 +378,7 @@
         db.ref('rooms/' + roomId + '/timers/' + key).remove();
     }
 
-    // 🔥🔥🔥 High Performance Rendering (Map Caching) 🔥🔥🔥
+    // 🔥🔥🔥 High Performance Rendering 🔥🔥🔥
     const mainCardMap = new Map();
     const pipCardMap = new Map();
 
@@ -380,14 +399,23 @@
         const now = Date.now();
         activeTimers.sort((a, b) => a.targetTime - b.targetTime);
 
-        // Sync Main
-        const mainContainer = document.getElementById('timerList');
-        if (mainContainer) syncContainer(mainContainer, mainCardMap, activeTimers, now);
-
-        // Sync PiP
+        // 🔥 Logic: ถ้าเปิด PiP ให้หยุดอัปเดต Main (เพื่อประหยัด RAM/CPU)
         if (pipWindow) {
+            // ซ่อน Main Container, โชว์ข้อความ
+            document.getElementById('timerList').style.display = 'none';
+            document.getElementById('pipActiveMsg').style.display = 'flex';
+            
+            // อัปเดต PiP
             const pipContainer = pipWindow.document.getElementById('timerList');
             if (pipContainer) syncContainer(pipContainer, pipCardMap, activeTimers, now);
+        } else {
+            // โชว์ Main Container, ซ่อนข้อความ
+            document.getElementById('timerList').style.display = 'block';
+            document.getElementById('pipActiveMsg').style.display = 'none';
+
+            // อัปเดต Main
+            const mainContainer = document.getElementById('timerList');
+            if (mainContainer) syncContainer(mainContainer, mainCardMap, activeTimers, now);
         }
     }
 
@@ -410,13 +438,11 @@
 
             const d = new Date(timer.targetTime);
             const thaiTime = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            // HTML สำหรับเวลาเกิด
             let spawnInfoHtml = isExpired ? 
                 `<div class="spawn-time-text expired">🔥 เกิดแล้วเมื่อ: ${thaiTime} น.</div>` : 
                 `<div class="spawn-time-text">🕒 จะเกิดเวลา: ${thaiTime} น.</div>`;
 
             if (!cardData) {
-                // Create New
                 const card = document.createElement('div');
                 card.className = 'timer-card';
                 card.innerHTML = `
@@ -432,8 +458,6 @@
                     <button class="btn-delete" onclick="removeTimerFromCloud('${timer.id}')">✖</button>
                 `;
                 container.appendChild(card);
-
-                // Cache References
                 cardData = {
                     card: card,
                     countdown: card.querySelector('.countdown'),
@@ -442,7 +466,6 @@
                 cardMap.set(timer.id, cardData);
             }
 
-            // Fast Update (DOM Diffing)
             if (cardData.countdown.innerText !== timeString) {
                  cardData.countdown.innerText = timeString;
             }
@@ -460,7 +483,6 @@
             }
         });
 
-        // Cleanup Removed
         for (const [id, data] of cardMap) {
             if (!activeIds.has(id)) {
                 data.card.remove();
@@ -471,26 +493,18 @@
 
     setInterval(updateTimersDisplay, 1000);
 
-    // 🔥🔥🔥 ระบบจอแยก (PiP) 🔥🔥🔥
     let pipWindow = null;
 
     async function togglePictureInPicture() {
         if (!('documentPictureInPicture' in window)) {
-            alert("Browser ของคุณไม่รองรับฟีเจอร์นี้ (ลองใช้ Chrome หรือ Edge บนคอมพิวเตอร์นะครับ)");
+            alert("Browser ของคุณไม่รองรับฟีเจอร์นี้");
             return;
         }
-
-        if (pipWindow) {
-            pipWindow.close();
-            return;
-        }
+        if (pipWindow) { pipWindow.close(); return; }
 
         try {
-            // ✅ ตั้งค่าความสูงเริ่มต้นให้ยาวขึ้น (600px) และกว้าง 320px
-            pipWindow = await documentPictureInPicture.requestWindow({
-                width: 320,
-                height: 600 
-            });
+            // ตั้งค่าความสูงเริ่มต้น 600px เพื่อให้เห็นหลายตัว
+            pipWindow = await documentPictureInPicture.requestWindow({ width: 320, height: 600 });
 
             [...document.styleSheets].forEach((styleSheet) => {
                 try {
@@ -511,14 +525,14 @@
             const pipTimerContainer = document.createElement('div');
             pipTimerContainer.id = 'timerList'; 
             pipWindow.document.body.append(pipTimerContainer);
-            
             pipWindow.document.body.classList.add('pip-mode');
 
-            updateTimersDisplay();
+            updateTimersDisplay(); // Update immediately
 
             pipWindow.addEventListener("pagehide", (event) => {
                 pipWindow = null;
-                pipCardMap.clear(); // Clear cache when window closes
+                pipCardMap.clear();
+                // เมื่อปิดจอแยก จอหลักจะกลับมาทำงานเองอัตโนมัติใน loop ถัดไป
             });
 
         } catch (err) {
@@ -526,7 +540,7 @@
         }
     }
 
-    // 🚫 ป้องกันการคลิกขวา และ Inspect
+    // Security Scripts
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.onkeydown = function(e) {
         if(e.keyCode == 123) return false;
