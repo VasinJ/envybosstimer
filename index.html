@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Timer - High Performance</title>
+    
+    <link rel="icon" href="images/LogoEnvy.jpg" type="image/jpeg">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style id="mainStyles">
+        :root {
+            --bg-body: #f1f2f6; --bg-panel: #ffffff; --primary: #2c3e50; 
+            --secondary: #34495e; --accent: #e67e22; --danger: #c0392b; 
+            --text-main: #2f3542; --text-light: #747d8c; 
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08); --border-r: 16px;
+        }
+
+        body { 
+            font-family: 'Kanit', sans-serif; margin: 0; padding: 0; 
+            background-color: var(--bg-body); color: var(--text-main); 
+            height: 100vh; display: flex; overflow: hidden; zoom: 0.9;
+        }
+
+        .container { display: flex; width: 100%; height: 100%; }
+        .left-panel, .right-panel { padding: 30px; overflow-y: auto; box-sizing: border-box; }
+        .left-panel { width: 45%; background-color: var(--bg-panel); display: flex; flex-direction: column; gap: 15px; box-shadow: 4px 0 20px rgba(0,0,0,0.05); z-index: 10; }
+        
+        .header-container { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .logo-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { margin: 0; color: var(--primary); font-weight: 700; font-size: 1.8em; letter-spacing: 0.5px; }
+        
+        .share-section { background: #dfe4ea; padding: 12px; text-align: center; border-radius: 12px; color: var(--secondary); font-size: 0.9em; font-weight: 500; }
+        .share-link { font-weight: bold; color: var(--primary); background: #fff; padding: 4px 10px; border-radius: 6px; border: 1px dashed var(--secondary); cursor: pointer; user-select: all; transition: 0.2s; }
+        .share-link:hover { background: var(--primary); color: white; border-style: solid; }
+
+        .tab-container { display: flex; gap: 10px; width: 100%; margin-top: 5px; }
+        .tab-btn { flex: 1; padding: 14px; border: none; border-radius: 12px; background: #dfe4ea; color: #7f8fa6; font-family: 'Kanit'; font-weight: 600; font-size: 1.1em; cursor: pointer; transition: all 0.3s ease; }
+        .tab-btn:hover { background: #ced6e0; color: var(--primary); }
+        .tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(44, 62, 80, 0.4); transform: translateY(-2px); }
+
+        .search-box { padding: 14px; border-radius: 12px; border: 2px solid #dfe4ea; background: #f1f2f6; font-family: 'Kanit'; outline: none; transition: 0.3s; font-size: 1em; width: 93%; color: var(--primary); }
+        .search-box:focus { border-color: var(--secondary); background: #fff; }
+
+        .boss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 5px; padding-bottom: 20px; max-height: 45vh; overflow-y: scroll; }
+        .boss-item { cursor: pointer; border-radius: 16px; text-align: center; padding: 10px; background: #fff; border: 2px solid #f1f2f6; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; position: relative; }
+        .boss-item:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: #ced6e0; z-index: 2; }
+        .boss-item.selected { border-color: var(--primary); background-color: #ecf0f1; transform: translateY(-4px); box-shadow: 0 8px 20px rgba(44, 62, 80, 0.2); z-index: 2; }
+        .boss-item img { width: 120px; height: 120px; object-fit: contain; border-radius: 12px; margin-bottom: 10px; background-color: #f8f9fa; display: block; margin-left: auto; margin-right: auto; }
+        .boss-item span { display: block; font-size: 1em; color: var(--text-main); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .boss-type-badge { font-size: 0.85em; padding: 4px 10px; border-radius: 6px; display: inline-block; font-weight: 700; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: none; }
+        .type-MVP { background-color: var(--danger); }
+        .type-Mini { background-color: #2980b9; }
+        .grid-badge { margin-bottom: 6px; font-size: 0.75em; }
+
+        .time-inputs { display: flex; gap: 10px; align-items: center; justify-content: center; background: #fff; padding: 25px; border-radius: 20px; border: 1px solid #dfe4ea; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+        .input-group { display: flex; flex-direction: column; align-items: center; position: relative; }
+        .input-group label { margin-top: 8px; font-size: 0.8em; color: var(--text-light); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .input-group input { width: 70px; height: 70px; padding: 0; text-align: center; background: #f1f2f6; border: 2px solid #dfe4ea; color: var(--primary); border-radius: 16px; font-size: 2em; font-weight: bold; outline: none; transition: all 0.3s ease; caret-color: var(--primary); }
+        .input-group input:focus { border-color: var(--primary); background: #fff; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(44, 62, 80, 0.15); }
+        .input-group input::placeholder { color: #ced6e0; opacity: 1; }
+        .time-separator { font-size: 2em; font-weight: bold; color: #ced6e0; margin-bottom: 25px; }
+
+        .btn-save { background-color: var(--primary); color: white; border: none; padding: 18px; font-size: 1.3em; font-weight: 600; cursor: pointer; border-radius: var(--border-r); transition: 0.3s; margin-top: auto; box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3); }
+        .btn-save:hover { background-color: #34495e; transform: translateY(-2px); }
+
+        .footer-credit { background: #fff; padding: 15px; border-radius: 16px; text-align: center; margin-top: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); font-size: 0.9em; color: var(--text-main); border: 1px solid #f1f2f6; }
+        .footer-credit p { margin: 5px 0; }
+        .footer-credit strong { color: var(--primary); font-weight: 700; }
+        .guild-link { color: var(--danger); font-weight: bold; text-decoration: none; transition: 0.2s; }
+        .guild-link:hover { color: #a92317; text-decoration: underline; }
+
+        .right-panel { width: 55%; background-color: var(--bg-body); position: relative; }
+        .timer-card { background-color: #fff; margin-bottom: 20px; padding: 20px; border-radius: var(--border-r); display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); border-left: 8px solid var(--primary); position: relative; transition: all 0.2s ease; }
+        
+        .timer-info { display: flex; align-items: center; gap: 20px; flex: 1; }
+        .timer-info img { width: 180px; height: 180px; object-fit: contain; border-radius: 16px; border: 1px solid #dfe4ea; background: #f8f9fa; }
+        .timer-text { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+        .timer-text h3 { margin: 0; font-size: 1.8em; color: var(--primary); line-height: 1.2; }
+        .card-badge { margin-bottom: 10px; padding: 5px 12px; font-size: 0.9em; }
+        
+        .spawn-time-text { font-size: 1.1em; margin-top: 8px; font-weight: 600; color: var(--secondary); }
+        .spawn-time-text.expired { color: var(--danger); font-weight: bold; }
+        
+        .countdown { font-size: 2.5em; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; width: 240px; text-align: center; flex-shrink: 0; line-height: 1; }
+        .countdown.spawned { color: var(--danger); font-size: 1.8em; }
+        
+        .btn-delete { background: #ffeae9; border: none; color: var(--danger); width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.2em; margin-left: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
+        .btn-delete:hover { background: var(--danger); color: white; }
+
+        .btn-pip { position: absolute; top: 30px; right: 30px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4); transition: 0.2s; z-index: 100; }
+        .btn-pip:hover { background: #d35400; transform: translateY(-2px); }
+
+        @media (max-width: 768px) { .container { flex-direction: column; overflow-y: scroll; } .left-panel, .right-panel { width: 100%; height: auto; } }
+
+        /* 🔥🔥🔥 CSS สำหรับโหมดจอแยก (PiP - Compact Landscape) 🔥🔥🔥 */
+        body.pip-mode {
+            padding: 0 !important;
+            zoom: 1 !important;
+            background-color: var(--bg-body) !important;
+            overflow-y: auto; 
+        }
+
+        .pip-mode .timer-card {
+            flex-direction: row; 
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px; /* ลด Padding */
+            border-left-width: 4px; 
+            margin-bottom: 5px; /* ลดระยะห่าง */
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 50px;
+        }
+
+        .pip-mode .timer-info {
+            flex-direction: row; 
+            gap: 8px;
+            flex: 1; 
+        }
+
+        .pip-mode .timer-info img {
+            width: 35px;  /* รูปเล็ก */
+            height: 35px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        .pip-mode .timer-text {
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .pip-mode .timer-text h3 {
+            font-size: 0.9rem; /* ชื่อบอสตัวเล็ก */
+            margin-bottom: 0;
+            line-height: 1;
+        }
+
+        .pip-mode .card-badge {
+            display: none; /* ซ่อน Badge ในจอเล็กเพื่อประหยัดที่ */
+        }
+
+        .pip-mode .spawn-time-text {
+            display: none; /* ซ่อนเวลาเกิด */
+        }
+
+        .pip-mode .countdown {
+            font-size: 1.2em; 
+            width: auto;
+            margin: 0 8px;
+            text-align: right;
+        }
+
+        .pip-mode .btn-delete {
+            width: 22px;
+            height: 22px;
+            font-size: 0.7em;
+            margin-left: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-panel">
+        <div class="header-container">
+            <img src="images/LogoEnvy.jpg" alt="Logo" class="logo-img">
+            <h2>Boss Timer Online</h2>
+        </div>
+        <div id="roomInfo" class="share-section">กำลังโหลดห้อง...</div>
+        <div class="tab-container">
+            <button class="tab-btn active" id="tabMVP" onclick="switchTab('MVP')">MVP Boss</button>
+            <button class="tab-btn" id="tabMini" onclick="switchTab('Mini')">Mini Boss</button>
+        </div>
+        <input type="text" id="searchBox" class="search-box" placeholder="🔍 ค้นหาบอส... (แสดงทั้งหมด)">
+        <div id="bossGrid" class="boss-grid"></div>
+        <div class="time-inputs">
+            <div class="input-group"><input type="text" id="inputHr" placeholder="00" maxlength="2" inputmode="numeric" oninput="validateTimeInput(this)" onclick="this.select()" autocomplete="off"><label>HOUR</label></div>
+            <div class="time-separator">:</div>
+            <div class="input-group"><input type="text" id="inputMin" placeholder="00" maxlength="2" inputmode="numeric" oninput="validateTimeInput(this)" onclick="this.select()" autocomplete="off"><label>MIN</label></div>
+            <div class="time-separator">:</div>
+            <div class="input-group"><input type="text" id="inputSec" placeholder="00" maxlength="2" inputmode="numeric" oninput="validateTimeInput(this)" onclick="this.select()" autocomplete="off"><label>SEC</label></div>
+        </div>
+        <button class="btn-save" onclick="addTimerToCloud()">☁️ บันทึก (Start Timer)</button>
+        <div class="footer-credit">
+            <p>Developed by <strong>จาเลี้ย</strong></p>
+            <p>Contact: <a href="https://www.facebook.com/profile.php?id=61571728319751" target="_blank" class="guild-link">ENVY Guild</a></p>
+        </div>
+    </div>
+
+    <div class="right-panel" id="rightPanel">
+        <button class="btn-pip" onclick="togglePictureInPicture()">🖥️ เปิดจอแยก (Floating)</button>
+        <h2 style="margin-bottom: 25px; color: var(--primary);">⏳ รายการรอเกิด (Sync Realtime)</h2>
+        <div id="timerList"></div>
+    </div>
+</div>
+
+<script>
+    // 🔥 Firebase Config 🔥
+    const firebaseConfig = {
+      apiKey: "AIzaSyC77trqUTlUf2qoY0ZIGYy4OtD6gJpXcb4",
+      authDomain: "bosstimer-a82a8.firebaseapp.com",
+      databaseURL: "https://bosstimer-a82a8-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "bosstimer-a82a8",
+      storageBucket: "bosstimer-a82a8.firebasestorage.app",
+      messagingSenderId: "280032313580",
+      appId: "1:280032313580:web:ec3145c4ab7e8cef2b65c9",
+      measurementId: "G-4XR94RRGS1"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 📁 ข้อมูลบอส
+    const bossData = [
+        // --- MVP ---
+        { id: 1, type: 'MVP', name: "Amon Ra", img: "images/MVP_Boss/MVP_Amon Ra.png" },
+        { id: 2, type: 'MVP', name: "Arc Angeling", img: "images/MVP_Boss/MVP_Arc Angeling.png" },
+        { id: 3, type: 'MVP', name: "Doppelganger", img: "images/MVP_Boss/MVP_Doppelganger.png" },
+        { id: 4, type: 'MVP', name: "Fallen Bishop", img: "images/MVP_Boss/MVP_Fallen Bishop.png" },
+        { id: 5, type: 'MVP', name: "Garm", img: "images/MVP_Boss/MVP_Garm.png" },
+        { id: 6, type: 'MVP', name: "Gioia", img: "images/MVP_Boss/MVP_Gioia.png" },
+        { id: 7, type: 'MVP', name: "Gloom Under Night", img: "images/MVP_Boss/MVP_Gloom Under Night.png" },
+        { id: 8, type: 'MVP', name: "Kraken", img: "images/MVP_Boss/MVP_Kraken.png" },
+        { id: 9, type: 'MVP', name: "Lord of the Dead", img: "images/MVP_Boss/MVP_Lord of the Dead.png" },
+        { id: 10, type: 'MVP', name: "Lost Dragon", img: "images/MVP_Boss/MVP_Lost Dragon.png" },
+        { id: 11, type: 'MVP', name: "Mistress Ly", img: "images/MVP_Boss/MVP_Mistress Ly.png" },
+        { id: 12, type: 'MVP', name: "Morroc", img: "images/MVP_Boss/MVP_Morroc.png" },
+        { id: 13, type: 'MVP', name: "Nidhoggrs Shadow", img: "images/MVP_Boss/MVP_Nidhoggrs Shadow.png" },
+        { id: 14, type: 'MVP', name: "Orc Lord", img: "images/MVP_Boss/MVP_Orc Lord.png" },
+        { id: 15, type: 'MVP', name: "Phreeoni", img: "images/MVP_Boss/MVP_Phreeoni.png" },
+        { id: 16, type: 'MVP', name: "Retribution", img: "images/MVP_Boss/MVP_Retribution.png" },
+        { id: 17, type: 'MVP', name: "rsxo806 N", img: "images/MVP_Boss/MVP_rsxo806 N.png" },
+        { id: 18, type: 'MVP', name: "Shadow Chaser Gertie", img: "images/MVP_Boss/MVP_Shadow Chaser Gertie.png" },
+        { id: 19, type: 'MVP', name: "Tao Gunka", img: "images/MVP_Boss/MVP_Tao Gunka.png" },
+        { id: 20, type: 'MVP', name: "Time Holder", img: "images/MVP_Boss/MVP_Time Holder.png" },
+        // --- Mini Boss ---
+        { id: 101, type: 'Mini', name: "Angeling", img: "images/Mini_Boss/Mini_Angeling.png" },
+        { id: 102, type: 'Mini', name: "Chimera", img: "images/Mini_Boss/Mini_Chimera.png" },
+        { id: 103, type: 'Mini', name: "Coelacanth", img: "images/Mini_Boss/Mini_Coelacanth.png" },
+        { id: 104, type: 'Mini', name: "Dark Priest", img: "images/Mini_Boss/Mini_Dark Priest.png" },
+        { id: 105, type: 'Mini', name: "Deviling", img: "images/Mini_Boss/Mini_Deviling.png" },
+        { id: 106, type: 'Mini', name: "Dragon Fly", img: "images/Mini_Boss/Mini_Dragon Fly.png" },
+        { id: 107, type: 'Mini', name: "Eclipse", img: "images/Mini_Boss/Mini_Eclipse.png" },
+        { id: 108, type: 'Mini', name: "Faceworm Queen", img: "images/Mini_Boss/Mini_Faceworm Queen.png" },
+        { id: 109, type: 'Mini', name: "Ghostring", img: "images/Mini_Boss/Mini_Ghostring.png" },
+        { id: 110, type: 'Mini', name: "Gold Queen Scaraba", img: "images/Mini_Boss/Mini_Gold Queen Scaraba.png" },
+        { id: 111, type: 'Mini', name: "King Dramoh", img: "images/Mini_Boss/Mini_King Dramoh.png" },
+        { id: 112, type: 'Mini', name: "Mastering", img: "images/Mini_Boss/Mini_Mastering.png" },
+        { id: 113, type: 'Mini', name: "Mysteltainn", img: "images/Mini_Boss/Mini_Mysteltainn.png" },
+        { id: 114, type: 'Mini', name: "Naght Sieger", img: "images/Mini_Boss/Mini_Naght Sieger .png" },
+        { id: 115, type: 'Mini', name: "Necromancer 4", img: "images/Mini_Boss/Mini_Necromancer 4.png" },
+        { id: 116, type: 'Mini', name: "Observation", img: "images/Mini_Boss/Mini_Observation.png" },
+        { id: 117, type: 'Mini', name: "Ogretooth", img: "images/Mini_Boss/Mini_Ogretooth.png" },
+        { id: 118, type: 'Mini', name: "Skeggiold", img: "images/Mini_Boss/Mini_Skeggiold.png" },
+        { id: 119, type: 'Mini', name: "Toad", img: "images/Mini_Boss/Mini_Toad.png" },
+        { id: 120, type: 'Mini', name: "Vagabond Wolf", img: "images/Mini_Boss/Mini_Vagabond Wolf.png" },
+        { id: 121, type: 'Mini', name: "Sorcerer Celia", img: "images/Mini_Boss/Mini_Sorcerer Celia.png" },
+        { id: 122, type: 'Mini', name: "Ktullanux", img: "images/Mini_Boss/Mini_Ktullanux.png" },
+        { id: 123, type: 'Mini', name: "Ranger Cecil", img: "images/Mini_Boss/Mini_Ranger Cecil.png" },
+        { id: 124, type: 'Mini', name: "Shelter", img: "images/Mini_Boss/Mini_Shelter.png" }
+    ];
+
+    const fallbackImage = "https://via.placeholder.com/150x150/cccccc/ffffff?text=No+Img";
+    let selectedBoss = null;
+    let activeTimers = [];
+    let currentTab = 'MVP';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomId = urlParams.get('room');
+    function generateRoomId() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+    if (!roomId) { roomId = generateRoomId(); window.location.search = `?room=${roomId}`; }
+    document.getElementById('roomInfo').innerHTML = `🔑 ห้อง: <span class="share-link" onclick="copyLink()">${roomId}</span> <span style="color:#666; font-size:0.9em;">(คลิกเลขห้องเพื่อ Copy)</span>`;
+    function copyLink() { navigator.clipboard.writeText(window.location.href); alert("คัดลอกลิ้งค์แล้ว!"); }
+
+    const bossGrid = document.getElementById('bossGrid');
+    const searchBox = document.getElementById('searchBox');
+
+    function switchTab(type) {
+        currentTab = type;
+        document.getElementById('tabMVP').classList.remove('active');
+        document.getElementById('tabMini').classList.remove('active');
+        document.getElementById(`tab${type}`).classList.add('active');
+        if (searchBox.value.trim() === '') renderBosses();
+    }
+
+    function renderBosses(filterText = '') {
+        bossGrid.innerHTML = '';
+        let filteredBosses = [];
+        if (filterText.trim() === '') {
+            filteredBosses = bossData.filter(b => b.type === currentTab);
+        } else {
+            filteredBosses = bossData.filter(b => b.name.toLowerCase().includes(filterText.toLowerCase()));
+        }
+
+        filteredBosses.forEach(boss => {
+            const div = document.createElement('div');
+            div.id = `boss-item-${boss.id}`;
+            div.className = `boss-item ${selectedBoss?.id === boss.id ? 'selected' : ''}`;
+            div.onclick = () => selectBoss(boss);
+            let typeBadge = '';
+            if (filterText.trim() !== '') {
+                typeBadge = `<span class="boss-type-badge type-${boss.type} grid-badge">${boss.type}</span><br>`;
+            }
+            div.innerHTML = `
+                <img src="${boss.img}" onerror="this.onerror=null;this.src='${fallbackImage}'">
+                ${typeBadge}
+                <span>${boss.name}</span>
+            `;
+            bossGrid.appendChild(div);
+        });
+    }
+
+    function selectBoss(boss) {
+        if (selectedBoss) {
+            const oldDiv = document.getElementById(`boss-item-${selectedBoss.id}`);
+            if (oldDiv) oldDiv.classList.remove('selected');
+        }
+        selectedBoss = boss;
+        if (boss.type !== currentTab && searchBox.value.trim() !== '') switchTab(boss.type);
+        const newDiv = document.getElementById(`boss-item-${boss.id}`);
+        if (newDiv) newDiv.classList.add('selected');
+    }
+    
+    function validateTimeInput(el) {
+        el.value = el.value.replace(/[^0-9]/g, '');
+        if(el.value.length > 2) el.value = el.value.slice(0, 2);
+    }
+
+    searchBox.addEventListener('input', (e) => renderBosses(e.target.value));
+    renderBosses();
+
+    function addTimerToCloud() {
+        if (!selectedBoss) { alert("⚠️ กรุณาเลือกบอสก่อน"); return; }
+        const hr = parseInt(document.getElementById('inputHr').value) || 0;
+        const min = parseInt(document.getElementById('inputMin').value) || 0;
+        const sec = parseInt(document.getElementById('inputSec').value) || 0;
+        const totalSeconds = (hr * 3600) + (min * 60) + sec;
+        
+        if (totalSeconds <= 0) { alert("⚠️ เวลาต้องมากกว่า 0"); return; }
+        const now = new Date().getTime();
+        const targetTime = now + (totalSeconds * 1000);
+        db.ref('rooms/' + roomId + '/timers').push({ bossId: selectedBoss.id, targetTime: targetTime });
+        
+        const currentDiv = document.getElementById(`boss-item-${selectedBoss.id}`);
+        if (currentDiv) currentDiv.classList.remove('selected');
+        selectedBoss = null;
+        document.getElementById('inputHr').value = '';
+        document.getElementById('inputMin').value = '';
+        document.getElementById('inputSec').value = '';
+    }
+
+    function removeTimerFromCloud(key) {
+        db.ref('rooms/' + roomId + '/timers/' + key).remove();
+    }
+
+    // 🔥🔥🔥 High Performance Rendering (Map Caching) 🔥🔥🔥
+    const mainCardMap = new Map();
+    const pipCardMap = new Map();
+
+    db.ref('rooms/' + roomId + '/timers').on('value', (snapshot) => {
+        const data = snapshot.val();
+        activeTimers = [];
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                const bossInfo = bossData.find(b => b.id === item.bossId);
+                if (bossInfo) activeTimers.push({ id: key, boss: bossInfo, targetTime: item.targetTime });
+            });
+        }
+        updateTimersDisplay();
+    });
+
+    function updateTimersDisplay() {
+        const now = Date.now();
+        activeTimers.sort((a, b) => a.targetTime - b.targetTime);
+
+        // Sync Main
+        const mainContainer = document.getElementById('timerList');
+        if (mainContainer) syncContainer(mainContainer, mainCardMap, activeTimers, now);
+
+        // Sync PiP
+        if (pipWindow) {
+            const pipContainer = pipWindow.document.getElementById('timerList');
+            if (pipContainer) syncContainer(pipContainer, pipCardMap, activeTimers, now);
+        }
+    }
+
+    function syncContainer(container, cardMap, timers, now) {
+        const activeIds = new Set();
+
+        timers.forEach(timer => {
+            activeIds.add(timer.id);
+            let cardData = cardMap.get(timer.id);
+
+            const distance = timer.targetTime - now;
+            let timeString = "", isExpired = false;
+            if (distance < 0) { isExpired = true; timeString = "SPAWNED!"; }
+            else {
+                const h = Math.floor((distance / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((distance / (1000 * 60)) % 60);
+                const s = Math.floor((distance / 1000) % 60);
+                timeString = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            }
+
+            const d = new Date(timer.targetTime);
+            const thaiTime = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            // HTML สำหรับเวลาเกิด
+            let spawnInfoHtml = isExpired ? 
+                `<div class="spawn-time-text expired">🔥 เกิดแล้วเมื่อ: ${thaiTime} น.</div>` : 
+                `<div class="spawn-time-text">🕒 จะเกิดเวลา: ${thaiTime} น.</div>`;
+
+            if (!cardData) {
+                // Create New
+                const card = document.createElement('div');
+                card.className = 'timer-card';
+                card.innerHTML = `
+                    <div class="timer-info">
+                        <img src="${timer.boss.img}" onerror="this.onerror=null;this.src='${fallbackImage}'">
+                        <div class="timer-text">
+                            <span class="boss-type-badge type-${timer.boss.type} card-badge">${timer.boss.type}</span>
+                            <h3>${timer.boss.name}</h3>
+                            <div class="info-wrapper">${spawnInfoHtml}</div>
+                        </div>
+                    </div>
+                    <div class="countdown">${timeString}</div>
+                    <button class="btn-delete" onclick="removeTimerFromCloud('${timer.id}')">✖</button>
+                `;
+                container.appendChild(card);
+
+                // Cache References
+                cardData = {
+                    card: card,
+                    countdown: card.querySelector('.countdown'),
+                    infoWrapper: card.querySelector('.info-wrapper')
+                };
+                cardMap.set(timer.id, cardData);
+            }
+
+            // Fast Update (DOM Diffing)
+            if (cardData.countdown.innerText !== timeString) {
+                 cardData.countdown.innerText = timeString;
+            }
+            if(isExpired) {
+                cardData.countdown.classList.add('spawned');
+                cardData.card.style.borderLeftColor = "#c0392b"; 
+                cardData.card.style.backgroundColor = "#fff5f5";
+            } else {
+                cardData.countdown.classList.remove('spawned');
+                cardData.card.style.borderLeftColor = ""; 
+                cardData.card.style.backgroundColor = "";
+            }
+            if(cardData.infoWrapper.innerHTML !== spawnInfoHtml) {
+                cardData.infoWrapper.innerHTML = spawnInfoHtml;
+            }
+        });
+
+        // Cleanup Removed
+        for (const [id, data] of cardMap) {
+            if (!activeIds.has(id)) {
+                data.card.remove();
+                cardMap.delete(id);
+            }
+        }
+    }
+
+    setInterval(updateTimersDisplay, 1000);
+
+    // 🔥🔥🔥 ระบบจอแยก (PiP) 🔥🔥🔥
+    let pipWindow = null;
+
+    async function togglePictureInPicture() {
+        if (!('documentPictureInPicture' in window)) {
+            alert("Browser ของคุณไม่รองรับฟีเจอร์นี้ (ลองใช้ Chrome หรือ Edge บนคอมพิวเตอร์นะครับ)");
+            return;
+        }
+
+        if (pipWindow) {
+            pipWindow.close();
+            return;
+        }
+
+        try {
+            // ✅ ตั้งค่าความสูงเริ่มต้นให้ยาวขึ้น (600px) และกว้าง 320px
+            pipWindow = await documentPictureInPicture.requestWindow({
+                width: 320,
+                height: 600 
+            });
+
+            [...document.styleSheets].forEach((styleSheet) => {
+                try {
+                    const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+                    const style = document.createElement('style');
+                    style.textContent = cssRules;
+                    pipWindow.document.head.appendChild(style);
+                } catch (e) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.type = styleSheet.type;
+                    link.media = styleSheet.media;
+                    link.href = styleSheet.href;
+                    pipWindow.document.head.appendChild(link);
+                }
+            });
+
+            const pipTimerContainer = document.createElement('div');
+            pipTimerContainer.id = 'timerList'; 
+            pipWindow.document.body.append(pipTimerContainer);
+            
+            pipWindow.document.body.classList.add('pip-mode');
+
+            updateTimersDisplay();
+
+            pipWindow.addEventListener("pagehide", (event) => {
+                pipWindow = null;
+                pipCardMap.clear(); // Clear cache when window closes
+            });
+
+        } catch (err) {
+            console.error("Failed to open PiP window:", err);
+        }
+    }
+
+    // 🚫 ป้องกันการคลิกขวา และ Inspect
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.onkeydown = function(e) {
+        if(e.keyCode == 123) return false;
+        if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+        if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+        if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+    }
+</script>
+
+</body>
+</html>
